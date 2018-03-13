@@ -10,22 +10,23 @@
 
 std::vector<std::string> getInput();
 int callProgram(std::vector<std::string> newArgv);
-void printHistory();//print a history of commands
+void printHistory(std::vector<std::vector<std::string>> history);//print a history of commands
 void runCommand(int commandNum);//runs a certain command from the history
 
 int main(){
 
 	bool blowThePopsicleStand = false;
+	std::vector<std::vector<std::string>> history;
 
 	while(!blowThePopsicleStand){
 		auto args = getInput();
+		history.push_back(args);
 		if(args[0] == "exit"){
 			return 0;
 		}else if(args[0] == "ptime"){
 			std::cout << "it's ptime!\n";
 		}else if(args[0] == "history"){
-			std::cout << "pay attention class!!\n";
-			printHistory();
+			printHistory(history);
 		}else if(args[0] == "^"){
 			if (args.size() > 1){
 				std::stringstream checkInt(args[1]);
@@ -49,8 +50,16 @@ void runCommand(int commandNum){
 	std::cout << "running command number " << commandNum << "...\n";
 }
 
-void printHistory(){
-	std::cout << "printing history...\n";
+void printHistory(std::vector<std::vector<std::string>> history){
+	std::cout << "-- Command History -- \n\n";
+	for(int i = 0; i < history.size(); i++){
+		std::vector<std::string> command = history[i];
+		std::cout << i + 1 << " : ";
+		for(int j = 0; j < command.size(); j++){
+			std::cout << command[j];
+		}
+		std::cout << std::endl;
+	}
 }
 
 //get input from user via prompt
