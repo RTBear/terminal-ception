@@ -7,6 +7,7 @@
 #include <unistd.h>//fork()
 #include <sys/types.h>//wait()
 #include <sys/wait.h>//wait()
+#include <cstring>
 
 std::vector<std::string> getInput();
 int callProgram(std::vector<std::string> newArgv);
@@ -110,13 +111,34 @@ std::vector<std::string> getInput(){
 	return newArgv;
 }
 
+//const char* getPath(std::string program){
+//	int succ = execvp("/usr/bin/which"
+//}
+
 //this function handles calling of an external program
 int callProgram(std::vector<std::string> newArgv){
-	auto result = fork();
 	int wstatus;
+	int programStatus = 0;
+	
+	const char *path = (char*)newArgv[0].c_str();
+
+	//convert vector to carray
+	char* charArgv[newArgv.size() - 1];
+	for(int i = 0; i < newArgv.size() - 1; i++){
+		charArgv[i] = (char*)newArgv[i + 1].c_str();
+	}
+
+	auto result = fork();
 	if(result == 0){//child
+		std::cout << "path: " << path << "\n";
+		for(int i = 0; i < newArgv.size() - 1; i++){
+			std::cout << charArgv[i] << " ";
+		}
+		std::cout << "\n";
+		programStatus = execvp(path, charArgv);
 		exit(0);
 	}else{//parent
 		wait(&wstatus);//reap dead children
 	}
+	return programStatus;
 }
