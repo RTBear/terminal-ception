@@ -10,54 +10,84 @@
 
 std::vector<std::string> getInput();
 int callProgram(std::vector<std::string> newArgv);
-void printHistory(std::vector<std::vector<std::string>> history);//print a history of commands
-void runCommand(int commandNum);//runs a certain command from the history
+void printHistory(std::vector<std::vector<std::string>> &history);//print a history of commands
+void runCommand(int commandNum, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);//runs a certain command from the history
+void printVector(std::vector<std::string> vec);
+void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);
+
+
 
 int main(){
-
 	bool blowThePopsicleStand = false;
 	std::vector<std::vector<std::string>> history;
 
 	while(!blowThePopsicleStand){
 		auto args = getInput();
+		runArgs(args, history, blowThePopsicleStand);
+	}
+
+	return 0;
+}
+
+void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand){
+	if(args.size() > 0){
 		history.push_back(args);
 		if(args[0] == "exit"){
-			return 0;
+			blowThePopsicleStand = true;
 		}else if(args[0] == "ptime"){
 			std::cout << "it's ptime!\n";
 		}else if(args[0] == "history"){
 			printHistory(history);
 		}else if(args[0] == "^"){
+			history.pop_back();
 			if (args.size() > 1){
 				std::stringstream checkInt(args[1]);
 				int commandNum;
 				if((checkInt >> commandNum).fail()){//verify argument is int
 					std::cout << "Invalid Argument: Second Arg to '^' must be a number.\n";	
 				}else{
-					runCommand(commandNum);
+					runCommand(commandNum, history, blowThePopsicleStand);
 				}
 			}else{
 				std::cout << "Insufficient Arguments: No defined behavior for '^' by itself.\n";
 			}
+		}else{
+			if(callProgram(args) < 0){
+				std::cout << "Error: Invalid Command\n";
+			}
 		}
-
 	}
-
-	return 0;
 }
 
-void runCommand(int commandNum){
-	std::cout << "running command number " << commandNum << "...\n";
+void printVector(std::vector<std::string> vec){
+	for(int i = 0; i < vec.size(); i++){
+		std::cout << vec[i];
+		if(i != vec.size() - 1) {
+			std::cout << " ";
+		}
+	}
 }
 
-void printHistory(std::vector<std::vector<std::string>> history){
+void runCommand(int commandNum, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand){
+	if(commandNum > 0){
+		if(history.size() > 0){
+			printVector(history[commandNum - 1]);
+			std::cout << "\n";
+			runArgs(history[commandNum - 1], history, blowThePopsicleStand);
+		}else{
+			std::cout << "Error: No History Yet\n";
+		}
+	}else{
+		std::cout << "Invalid Argument: Number must be greater than zero.\n";
+	}
+}
+
+void printHistory(std::vector<std::vector<std::string>> &history){
 	std::cout << "-- Command History -- \n\n";
 	for(int i = 0; i < history.size(); i++){
 		std::vector<std::string> command = history[i];
 		std::cout << i + 1 << " : ";
-		for(int j = 0; j < command.size(); j++){
-			std::cout << command[j];
-		}
+		printVector(command);
 		std::cout << std::endl;
 	}
 }
@@ -78,10 +108,6 @@ std::vector<std::string> getInput(){
 	}
 
 	return newArgv;
-	// debugging, print newArgv
-	//	for(int i = 0; i < newArgv.size(); i++){
-	//		std::cout << newArgv[i] << "\n";
-	//	}
 }
 
 //this function handles calling of an external program
