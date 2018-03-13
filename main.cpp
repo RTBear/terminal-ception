@@ -7,11 +7,11 @@
 #include <unistd.h>//fork()
 #include <sys/types.h>//wait()
 #include <sys/wait.h>//wait()
-#include <stdio.h>//strtok()
-#include <string.h>//strtok()
 
 std::vector<std::string> getInput();
 int callProgram(std::vector<std::string> newArgv);
+void printHistory();//print a history of commands
+void runCommand(int commandNum);//runs a certain command from the history
 
 int main(){
 
@@ -21,19 +21,45 @@ int main(){
 		auto args = getInput();
 		if(args[0] == "exit"){
 			return 0;
+		}else if(args[0] == "ptime"){
+			std::cout << "it's ptime!\n";
+		}else if(args[0] == "history"){
+			std::cout << "pay attention class!!\n";
+			printHistory();
+		}else if(args[0] == "^"){
+			if (args.size() > 1){
+				std::stringstream checkInt(args[1]);
+				int commandNum;
+				if((checkInt >> commandNum).fail()){//verify argument is int
+					std::cout << "Invalid Argument: Second Arg to '^' must be a number.\n";	
+				}else{
+					runCommand(commandNum);
+				}
+			}else{
+				std::cout << "Insufficient Arguments: No defined behavior for '^' by itself.\n";
+			}
 		}
+
 	}
 
 	return 0;
 }
 
+void runCommand(int commandNum){
+	std::cout << "running command number " << commandNum << "...\n";
+}
+
+void printHistory(){
+	std::cout << "printing history...\n";
+}
+
 //get input from user via prompt
 std::vector<std::string> getInput(){
 	std::cout << "[cmd]: ";
-	
+
 	std::string input;
 	std::getline(std::cin,input);
-	
+
 	std::vector<std::string> newArgv;//list of args from prompt
 	std::stringstream tokenizer(input);//stream to hold them
 	std::string token;//temp variable for individual tokens
@@ -43,10 +69,10 @@ std::vector<std::string> getInput(){
 	}
 
 	return newArgv;
-// debugging, print newArgv
-//	for(int i = 0; i < newArgv.size(); i++){
-//		std::cout << newArgv[i] << "\n";
-//	}
+	// debugging, print newArgv
+	//	for(int i = 0; i < newArgv.size(); i++){
+	//		std::cout << newArgv[i] << "\n";
+	//	}
 }
 
 //this function handles calling of an external program
