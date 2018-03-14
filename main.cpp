@@ -1,5 +1,6 @@
 //Ryan Mecham A01839282
 
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -8,6 +9,8 @@
 #include <sys/types.h>//wait()
 #include <sys/wait.h>//wait()
 #include <cstring>
+#include <ctime>//ptime()
+#include <chrono>//ptime()
 
 std::vector<std::string> getInput();
 void callProgram(std::vector<std::string> newArgv);
@@ -17,10 +20,12 @@ void printVector(std::vector<std::string> vec);
 void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);
 
 
+double elapsed_seconds = 0;
 
 int main(){
 	bool blowThePopsicleStand = false;
 	std::vector<std::vector<std::string>> history;
+
 
 	while(!blowThePopsicleStand){
 		auto args = getInput();
@@ -36,7 +41,7 @@ void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>
 		if(args[0] == "exit"){
 			blowThePopsicleStand = true;
 		}else if(args[0] == "ptime"){
-			std::cout << "it's ptime!\n";
+			std::cout << "Time spent executing child process: " << std::setprecision(4) << std::fixed << elapsed_seconds << " seconds\n";
 		}else if(args[0] == "history"){
 			printHistory(history);
 		}else if(args[0] == "^"){
@@ -53,7 +58,11 @@ void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>
 				std::cout << "Insufficient Arguments: No defined behavior for '^' by itself.\n";
 			}
 		}else{
+			auto start = std::chrono::system_clock::now();
 			callProgram(args);
+			auto end = std::chrono::system_clock::now();
+			std::chrono::duration<double> diff = end - start;
+			elapsed_seconds = diff.count();
 		}
 	}
 }
@@ -116,7 +125,7 @@ std::vector<std::string> getInput(){
 //this function handles calling of an external program
 void callProgram(std::vector<std::string> newArgv){
 	int wstatus;
-	
+
 	const char *path = (char*)newArgv[0].c_str();
 
 	//convert vector to carray
@@ -132,12 +141,12 @@ void callProgram(std::vector<std::string> newArgv){
 
 	auto result = fork();
 	if(result == 0){//child
-//		std::cout << "path: " << path << "\n";
-//		std::cout << "argv: ";
-//		for(int i = 0; i < newArgv.size(); i++){
-//			std::cout << charArgv[i] << " ";
-//		}
-		
+		//		std::cout << "path: " << path << "\n";
+		//		std::cout << "argv: ";
+		//		for(int i = 0; i < newArgv.size(); i++){
+		//			std::cout << charArgv[i] << " ";
+		//		}
+
 		int status = execvp(path, charArgv);
 		std::cout << "\nAn error occured executing program: " << path << std::endl;
 		exit(0);
