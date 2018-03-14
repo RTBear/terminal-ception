@@ -8,6 +8,7 @@
 #include <unistd.h>//fork()
 #include <sys/types.h>//wait()
 #include <sys/wait.h>//wait()
+#include <sys/time.h>//gettimeofday()
 #include <cstring>
 #include <ctime>//ptime()
 #include <chrono>//ptime()
@@ -18,14 +19,16 @@ void printHistory(std::vector<std::vector<std::string>> &history);//print a hist
 void runCommand(int commandNum, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);//runs a certain command from the history
 void printVector(std::vector<std::string> vec);
 void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);
+std::string formatTime(timeval now);
+std::string makeNum2Digit(int num);
 
-
-double elapsed_seconds = 0;
+timeval beginRunTime;
 
 int main(){
 	bool blowThePopsicleStand = false;
 	std::vector<std::vector<std::string>> history;
 
+	gettimeofday(&beginRunTime, NULL);
 
 	while(!blowThePopsicleStand){
 		auto args = getInput();
@@ -35,7 +38,34 @@ int main(){
 	return 0;
 }
 
+std::string makeNum2Digit(int num){
+	std::string numStr;
+	if(num < 10){
+		numStr = "0" + std::to_string(num);
+	}else{
+		numStr = std::to_string(num);
+	}
+	return numStr;
+}
+
+std::string formatTime(timeval now){
+	double runTime = now.tv_sec - beginRunTime.tv_sec;
+
+	int hours = runTime / 3600;
+	int minutes = (int)(runTime / 60) % 60;
+	int seconds = (int)runTime % 60;
+
+	std::string s_hrs = makeNum2Digit(hours);
+	std::string s_min = makeNum2Digit(minutes);
+	std::string s_sec = makeNum2Digit(seconds);
+
+	std::string time = s_hrs + ":" + s_min + ":" + s_sec;
+
+	return time;
+}
+
 void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand){
+	static double elapsed_seconds = 0;
 	if(args.size() > 0){
 		history.push_back(args);
 		if(args[0] == "exit"){
@@ -54,9 +84,14 @@ void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>
 				}else{
 					runCommand(commandNum, history, blowThePopsicleStand);
 				}
+
 			}else{
 				std::cout << "Insufficient Arguments: No defined behavior for '^' by itself.\n";
 			}
+		}else if(args[0] == "living_time"){
+			timeval now;
+			gettimeofday(&now, NULL);
+			std::cout << "Shell up time: " << formatTime(now) << "\n";
 		}else{
 			auto start = std::chrono::system_clock::now();
 			callProgram(args);
