@@ -130,14 +130,14 @@ void callProgram(std::vector<std::string> newArgv){
 
 	charArgv[newArgv.size()] = nullptr;
 
-	auto result = 0;//fork();
+	auto result = fork();
 	if(result == 0){//child
-		std::cout << "path: " << path << "\n";
-		std::cout << "argv: ";
-		for(int i = 0; i < newArgv.size(); i++){
-			std::cout << charArgv[i] << " ";
-		}
-		//std::cout << "===\n**";
+//		std::cout << "path: " << path << "\n";
+//		std::cout << "argv: ";
+//		for(int i = 0; i < newArgv.size(); i++){
+//			std::cout << charArgv[i] << " ";
+//		}
+		
 		int status = execvp(path, charArgv);
 		std::cout << "\nAn error occured executing program: " << path << std::endl;
 		exit(0);
