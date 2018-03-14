@@ -10,7 +10,7 @@
 #include <cstring>
 
 std::vector<std::string> getInput();
-int callProgram(std::vector<std::string> newArgv);
+void callProgram(std::vector<std::string> newArgv);
 void printHistory(std::vector<std::vector<std::string>> &history);//print a history of commands
 void runCommand(int commandNum, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);//runs a certain command from the history
 void printVector(std::vector<std::string> vec);
@@ -53,9 +53,7 @@ void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>
 				std::cout << "Insufficient Arguments: No defined behavior for '^' by itself.\n";
 			}
 		}else{
-			if(callProgram(args) < 0){
-				std::cout << "Error: Invalid Command\n";
-			}
+			callProgram(args);
 		}
 	}
 }
@@ -116,29 +114,34 @@ std::vector<std::string> getInput(){
 //}
 
 //this function handles calling of an external program
-int callProgram(std::vector<std::string> newArgv){
+void callProgram(std::vector<std::string> newArgv){
 	int wstatus;
-	int programStatus = 0;
 	
 	const char *path = (char*)newArgv[0].c_str();
 
 	//convert vector to carray
-	char* charArgv[newArgv.size() - 1];
-	for(int i = 0; i < newArgv.size() - 1; i++){
-		charArgv[i] = (char*)newArgv[i + 1].c_str();
+	char* charArgv[newArgv.size() + 1];// make room to add nullptr to end of array
+	for(int i = 0; i < newArgv.size(); i++){
+		charArgv[i] = (char*)newArgv[i].c_str();
 	}
+	//ex...
+	//newArgv:  [1, 2, 3, 4]
+	//charargv: [1, 2, 3, 4, nullptr]
 
-	auto result = fork();
+	charArgv[newArgv.size()] = nullptr;
+
+	auto result = 0;//fork();
 	if(result == 0){//child
 		std::cout << "path: " << path << "\n";
-		for(int i = 0; i < newArgv.size() - 1; i++){
+		std::cout << "argv: ";
+		for(int i = 0; i < newArgv.size(); i++){
 			std::cout << charArgv[i] << " ";
 		}
-		std::cout << "\n";
-		programStatus = execvp(path, charArgv);
+		//std::cout << "===\n**";
+		int status = execvp(path, charArgv);
+		std::cout << "\nAn error occured executing program: " << path << std::endl;
 		exit(0);
 	}else{//parent
 		wait(&wstatus);//reap dead children
 	}
-	return programStatus;
 }
