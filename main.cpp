@@ -1,5 +1,3 @@
-//Ryan Mecham A01839282
-
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -12,6 +10,12 @@
 #include <cstring>
 #include <ctime>//ptime()
 #include <chrono>//ptime()
+#include <csignal>//ignoreSig()
+
+#include "filesystem.hpp"
+
+const int WRITE = 1;
+const int READ = 0;
 
 std::vector<std::string> getInput();
 void callProgram(std::vector<std::string> newArgv);
@@ -21,10 +25,19 @@ void printVector(std::vector<std::string> vec);
 void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);
 std::string formatTime(timeval now);
 std::string makeNum2Digit(int num);
+int countPipes(std::vector<std::string> args);
+std::vector<std::vector<std::string>> parsePipes(std::vector<std::string> args);
 
 timeval beginRunTime;
 
+//ignore ctrl-c
+void ignoreSig(int signal){
+	//do nothing :)
+}
+
 int main(){
+	signal(SIGINT, ignoreSig);
+
 	bool blowThePopsicleStand = false;
 	std::vector<std::vector<std::string>> history;
 
@@ -32,10 +45,42 @@ int main(){
 
 	while(!blowThePopsicleStand){
 		auto args = getInput();
-		runArgs(args, history, blowThePopsicleStand);
+		int pipeCount = countPipes(args);
+		if(pipeCount == 1){//can be changed to pipeCount > 0 later
+			//create pipe
+			//int p[2];
+			//pipe(p);
+			auto pipedArgs = parsePipes(args);
+
+			std::cout << "piped args\n";
+
+			printHistory(pipedArgs);//debugging
+
+			//runArgs(args, history, blowThePopsicleStand);
+
+		}
+	//	runArgs(args, history, blowThePopsicleStand);
 	}
 
 	return 0;
+}
+
+std::vector<std::vector<std::string>> parsePipes(std::vector<std::string> args){
+	std::vector<std::vector<std::string>> pipedArgs;
+	std::vector<std::string> parsedVec;
+
+	for(int i = 0; i < args.size(); i++){
+		if(args[i] != "|"){
+			parsedVec.push_back(args[i]);
+		}else{
+			pipedArgs.push_back(parsedVec);
+			parsedVec.clear();
+		}
+	}
+	if(parsedVec.size() > 0){
+		pipedArgs.push_back(parsedVec);
+	}
+	return pipedArgs;
 }
 
 std::string makeNum2Digit(int num){
@@ -64,17 +109,28 @@ std::string formatTime(timeval now){
 	return time;
 }
 
+int countPipes(std::vector<std::string> args){
+	int pipeCount = 0;
+	for(int i = 0; i < args.size(); i++){
+		if(args[i] == "|"){
+			pipeCount++;
+		}
+	}
+	return pipeCount;
+}
+
 void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand){
 	static double elapsed_seconds = 0;
 	if(args.size() > 0){
+		std::string cmd = args[0];
 		history.push_back(args);
-		if(args[0] == "exit"){
+		if(cmd == "exit"){
 			blowThePopsicleStand = true;
-		}else if(args[0] == "ptime"){
+		}else if(cmd == "ptime"){
 			std::cout << "Time spent executing child process: " << std::setprecision(4) << std::fixed << elapsed_seconds << " seconds\n";
-		}else if(args[0] == "history"){
+		}else if(cmd == "history"){
 			printHistory(history);
-		}else if(args[0] == "^"){
+		}else if(cmd == "^"){
 			history.pop_back();
 			if (args.size() > 1){
 				std::stringstream checkInt(args[1]);
@@ -88,10 +144,16 @@ void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>
 			}else{
 				std::cout << "Insufficient Arguments: No defined behavior for '^' by itself.\n";
 			}
-		}else if(args[0] == "living_time"){
+		}else if(cmd == "living_time"){
 			timeval now;
 			gettimeofday(&now, NULL);
 			std::cout << "Shell up time: " << formatTime(now) << "\n";
+		}else if(cmd == "cd"){
+			if(args.size() > 1){
+				chdir(args[1].c_str());	
+			}else{
+				std::cout << "Insufficient Arguments: No defined behavior for 'cd' by itself.\n";
+			}
 		}else{
 			auto start = std::chrono::system_clock::now();
 			callProgram(args);
@@ -137,7 +199,7 @@ void printHistory(std::vector<std::vector<std::string>> &history){
 
 //get input from user via prompt
 std::vector<std::string> getInput(){
-	std::cout << "[cmd]: ";
+	std::cout << "[" << getMycwd() << "/shell]: ";
 
 	std::string input;
 	std::getline(std::cin,input);
