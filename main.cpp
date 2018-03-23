@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <error.h>
+#include <errno.h>
 #include <unistd.h>//fork()
 #include <sys/types.h>//wait()
 #include <sys/wait.h>//wait()
@@ -16,9 +18,10 @@
 
 const int WRITE = 1;
 const int READ = 0;
+double elapsed_seconds = 0;//used for timing of a program
 
 std::vector<std::string> getInput();
-void callProgram(std::vector<std::string> newArgv);
+void callProgram(std::vector<std::string> newArgv, bool forkToCall);
 void printHistory(std::vector<std::vector<std::string>> &history);//print a history of commands
 void runCommand(int commandNum, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand);//runs a certain command from the history
 void printVector(std::vector<std::string> vec);
@@ -47,19 +50,53 @@ int main(){
 		auto args = getInput();
 		int pipeCount = countPipes(args);
 		if(pipeCount == 1){//can be changed to pipeCount > 0 later
+			history.push_back(args);//add to history
+			auto start = std::chrono::system_clock::now();
 			//create pipe
-			//int p[2];
-			//pipe(p);
+			int p[2];
+			pipe(p);
+
 			auto pipedArgs = parsePipes(args);
 
-			std::cout << "piped args\n";
+			//fork and write to pipe
+			//fork and close read end and change p[write] to stdout_fileno
+			//	call function
+			if(fork() == 0){
+				close(p[READ]);
 
-			printHistory(pipedArgs);//debugging
+				dup2(p[WRITE], STDOUT_FILENO);
 
-			//runArgs(args, history, blowThePopsicleStand);
+				callProgram(pipedArgs[0], false);
+			}
+			//fork and read from pipe
+			//	pass as arg to new function
+			if(fork() == 0){
+				close(p[WRITE]);
+				dup2(p[READ], STDIN_FILENO);
+				callProgram(pipedArgs[1], false);
+			}
 
+			//This code was borrowed from E. Falor~~~~~~~~~~~~
+			//close pipe ends in parent
+			close(p[READ]);
+			close(p[WRITE]);
+
+			//wait for the 'lil ones
+
+			int wstatus;
+			int kids = 2;
+			while (kids > 0) {
+				pid_t kiddo = waitpid(-1, &wstatus, 0);
+				kids--;
+			}
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+			auto end = std::chrono::system_clock::now();
+			std::chrono::duration<double> diff = end - start;
+			elapsed_seconds = diff.count();
+		}else{
+			runArgs(args, history, blowThePopsicleStand);
 		}
-	//	runArgs(args, history, blowThePopsicleStand);
 	}
 
 	return 0;
@@ -120,7 +157,6 @@ int countPipes(std::vector<std::string> args){
 }
 
 void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>> &history, bool &blowThePopsicleStand){
-	static double elapsed_seconds = 0;
 	if(args.size() > 0){
 		std::string cmd = args[0];
 		history.push_back(args);
@@ -156,7 +192,7 @@ void runArgs(std::vector<std::string> args, std::vector<std::vector<std::string>
 			}
 		}else{
 			auto start = std::chrono::system_clock::now();
-			callProgram(args);
+			callProgram(args, true);
 			auto end = std::chrono::system_clock::now();
 			std::chrono::duration<double> diff = end - start;
 			elapsed_seconds = diff.count();
@@ -220,7 +256,7 @@ std::vector<std::string> getInput(){
 //}
 
 //this function handles calling of an external program
-void callProgram(std::vector<std::string> newArgv){
+void callProgram(std::vector<std::string> newArgv, bool forkToCall){
 	int wstatus;
 
 	const char *path = (char*)newArgv[0].c_str();
@@ -236,18 +272,24 @@ void callProgram(std::vector<std::string> newArgv){
 
 	charArgv[newArgv.size()] = nullptr;
 
-	auto result = fork();
-	if(result == 0){//child
-		//		std::cout << "path: " << path << "\n";
-		//		std::cout << "argv: ";
-		//		for(int i = 0; i < newArgv.size(); i++){
-		//			std::cout << charArgv[i] << " ";
-		//		}
+	if(forkToCall){
+		auto result = fork();
+		if(result == 0){//child
+			//		std::cout << "path: " << path << "\n";
+			//		std::cout << "argv: ";
+			//		for(int i = 0; i < newArgv.size(); i++){
+			//			std::cout << charArgv[i] << " ";
+			//		}
 
-		int status = execvp(path, charArgv);
-		std::cout << "\nAn error occured executing program: " << path << std::endl;
-		exit(0);
-	}else{//parent
-		wait(&wstatus);//reap dead children
+			int status = execvp(path, charArgv);
+			std::cout << "\nAn error occured executing program: " << path << std::endl;
+			exit(0);
+		}else{//parent
+			wait(&wstatus);//reap dead children
+		}
+	}else{
+		if(execvp(path, charArgv) < 0){
+			error(1, errno, "Failed to execute portion of pipe");
+		}
 	}
 }
